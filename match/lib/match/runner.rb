@@ -27,7 +27,7 @@ module Match
       end
 
       # Certificate
-      cert_id = fetch_certificate(params: params)
+      cert_id = fetch_certificate(params: params) unless params[:profiles_only]
       spaceship.certificate_exists(username: params[:username], certificate_id: cert_id) if spaceship
 
       # Provisioning Profiles

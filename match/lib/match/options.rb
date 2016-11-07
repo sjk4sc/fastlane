@@ -49,6 +49,13 @@ module Match
                                      description: "Only fetch existing certificates and profiles, don't generate new ones",
                                      is_string: false,
                                      default_value: false),
+        FastlaneCore::ConfigItem.new(key: :profiles_only,
+                                     description: "Skip installing certificates, uses '--readonly' option",
+                                     is_string: false,
+                                     default_value: false,
+                                     verify_block: proc do |value|
+                                       ENV["MATCH_READONLY"] = 'true' if value
+                                     end),
         FastlaneCore::ConfigItem.new(key: :team_id,
                                      short_option: "-b",
                                      env_name: "FASTLANE_TEAM_ID",
