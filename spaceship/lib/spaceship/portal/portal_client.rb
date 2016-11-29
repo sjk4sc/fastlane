@@ -132,6 +132,18 @@ module Spaceship
       details_for_app(app)
     end
 
+    def valid_name_for(input)
+      latinazed = input.to_slug.transliterate
+      latinazed = latinazed.gsub(/[^0-9A-Za-z\d\s]/, '') # remove non-valid characters
+      # Check if the input string was modified, since it might be empty now
+      # (if it only contained non-latin symbols) or the duplicate of another app
+      if latinazed != input
+        latinazed << " "
+        latinazed << Digest::MD5.hexdigest(input)
+      end
+      latinazed
+    end
+
     def create_app!(type, name, bundle_id, mac: false)
       # We moved the ensure_csrf to the top of this method
       # as we got some users with issues around creating new apps
@@ -155,7 +167,7 @@ module Spaceship
                      end
 
       params = {
-        name: name,
+        name: valid_name_for(name),
         teamId: team_id
       }
 
@@ -216,26 +228,28 @@ module Spaceship
     # @!group Devices
     #####################################################
 
-    def devices(mac: false)
+    def devices(mac: false, include_disabled: false)
       paging do |page_number|
         r = request(:post, "account/#{platform_slug(mac)}/device/listDevices.action", {
           teamId: team_id,
           pageNumber: page_number,
           pageSize: page_size,
-          sort: 'name=asc'
+          sort: 'name=asc',
+          includeRemovedDevices: include_disabled
         })
         parse_response(r, 'devices')
       end
     end
 
-    def devices_by_class(device_class)
+    def devices_by_class(device_class, include_disabled: false)
       paging do |page_number|
         r = request(:post, 'account/ios/device/listDevices.action', {
           teamId: team_id,
           pageNumber: page_number,
           pageSize: page_size,
           sort: 'name=asc',
-          deviceClasses: device_class
+          deviceClasses: device_class,
+          includeRemovedDevices: include_disabled
         })
         parse_response(r, 'devices')
       end
@@ -253,6 +267,22 @@ module Spaceship
         }
       end
 
+      parse_response(req, 'device')
+    end
+
+    def disable_device!(device_id, device_udid, mac: false)
+      request(:post, "https://developer.apple.com/services-account/#{PROTOCOL_VERSION}/account/#{platform_slug(mac)}/device/deleteDevice.action", {
+        teamId: team_id,
+        deviceId: device_id
+      })
+    end
+
+    def enable_device!(device_id, device_udid, mac: false)
+      req = request(:post, "https://developer.apple.com/services-account/#{PROTOCOL_VERSION}/account/#{platform_slug(mac)}/device/enableDevice.action", {
+          teamId: team_id,
+          displayId: device_id,
+          deviceNumber: device_udid
+      })
       parse_response(req, 'device')
     end
 
